@@ -1,5 +1,3 @@
-SQL 手順
-
 CREATE DATABASE accounts;
 データベースを作成。
 
@@ -14,10 +12,3 @@ ROOL を作成。
 
 GRANT ALL PRIVILEGES ON TABLE users TO account;
 これで account に権限を与える。
-
-VScord 側
-npm init -y
-
-npm install nodemon --save-dev
-
-npm install pg
