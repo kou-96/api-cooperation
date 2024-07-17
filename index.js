@@ -1,9 +1,15 @@
 const express = require("express");
+const cors = require("cors");
 const pool = require("./db");
-
 const app = express();
 const PORT = 5002;
 
+const corsOption = {
+  origin: ["http://localhost:5173"],
+  optionSuccessStatus: 200,
+};
+
+app.use(cors(corsOption));
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -42,45 +48,37 @@ app.post("/api/login", (req, res) => {
   );
 });
 
-app.post("/api/signup", (req, res) => {
+app.post("/api/signup", async (req, res) => {
   const { username, email, password } = req.body;
 
-  if (!username)
-    return res.status(401).send("ユーザーネームを入力してください。");
-  if (!email) return res.status(401).send("メールアドレスを入力してください。");
-  if (!password) return res.status(401).send("パスワードを入力してください。");
+  try {
+    const checkUsername = await pool.query(
+      "SELECT username FROM users WHERE username = $1",
+      [username]
+    );
 
-  pool.query(
-    "SELECT username FROM users WHERE username = $1",
-    [username],
-    (errors, response) => {
-      if (errors) throw errors;
-
-      if (response.rowCount > 0)
-        return res.status(409).send("このユーザーネームは使用されています。");
+    if (checkUsername.rows.length > 0) {
+      return res.status(409).send("このユーザーネームは使用されています。");
     }
-  );
 
-  pool.query(
-    "SELECT email FROM users WHERE email = $1",
-    [email],
-    (errors, response) => {
-      if (errors) throw errors;
+    const checkEmail = await pool.query(
+      "SELECT email FROM users WHERE email = $1",
+      [email]
+    );
 
-      if (response.rowCount > 0)
-        return res.status(409).send("このメールアドレスは使用されています。");
+    if (checkEmail.rows.length > 0) {
+      return res.status(409).send("このメールアドレスは使用されています。");
     }
-  );
+    const result = await pool.query(
+      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
+      [username, email, password]
+    );
 
-  pool.query(
-    "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
-    [username, email, password],
-    (errors) => {
-      if (errors) throw errors;
-
-      return res.status(200).send("ユーザーの作成に成功しました。");
-    }
-  );
+    res.status(201).send("ユーザーの作成に成功しました。");
+  } catch (err) {
+    console.error("Error executing query:", err);
+    res.status(500).send("ユーザーの作成に失敗しました。");
+  }
 });
 
 app.delete("/api/:id", (req, res) => {
